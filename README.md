@@ -1,3 +1,8 @@
+<!--
+Syntax for GitHub markdown
+https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax
+-->
+
 # Arduino Digital Dial Indicator/Caliper Reader
 
 This code was developed to read values from a import (Chinese) digital
@@ -162,6 +167,23 @@ and data pulses along with their timings.
 ## Full 24-Bit Inverted Data Packet (5V): -0.039 in
 <img src="images/FullDataBurst5V_-0.039in.png" width="800" height="500">
 
+# `display_curses.py`
+
+This is a python program that connects to the Arduino running this code
+and then displays it in a terminal window using `curses`. Below are
+sample screenshots.
+
+## 0.00 mm
+<img src="images/ZeroMM.png" width="800" height="500">
+
+## 1.81 mm
+<img src="images/PositiveMM.png" width="800" height="500">
+
+## -1.30 mm
+<img src="images/NegativeMM.png" width="800" height="500">
+
+## -0.0495 in
+<img src="images/NegativeInch.png" width="800" height="500">
 
 # AtMega328p Timer/Counter Frequencies
 

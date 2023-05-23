@@ -175,11 +175,21 @@ Timing:
 #define TRAILING_EDGE RISING
 #endif
 
+// Set HEARTBEAT_MS to the number of milliseconds to re-issue measurement
+// even if it has not changed.
+#define HEARTBEAT_MS 2000
+
+// Toggle Output Pin PORTB4/D12 on ISR.
+// When set to true, will set the output pin to HIGH
+// in the ISR when it first sees 24 bits read. It gets cleared
+// on the next call to the ISR.
+#define DEBUG_OUTPUT_PIN true
+
 // Indicator/Caliper bit constants/masks
-#define DATA_MASK      0x0FFFFF
-#define INCH_MM_MASK   0x800000   // Bit 23
-#define SIGN_MASK      0x100000   // Bit 20
-#define DATA_BIT_COUNT 24
+#define DATA_MASK        0x0FFFFF   // Lower 20 bits of data packet
+#define INCH_MM_MASK     0x800000   // Bit 23
+#define SIGN_MASK        0x100000   // Bit 20
+#define PACKET_BIT_COUNT 24
 
 volatile uint32_t next_bit = 1;  // Shifts left for each bit read from data
 volatile uint8_t bits_read = 0;
@@ -190,13 +200,6 @@ volatile bool data_ready = false;  // True when data is ready to use
 
 // Used in loop() to detect changes in output.
 uint32_t prev_data = -1; // Last data bits copied from data variable
-
-
-// Toggle Output Pin PORTB4/D12 on ISR.
-// When set to true, will set the output pin to HIGH
-// in the ISR when it first sees 24 bits read. It gets cleared
-// on the next call to the ISR.
-#define DEBUG_OUTPUT_PIN true
 
 
 void setup() {
@@ -238,6 +241,10 @@ void displayMeasurement() {
   }
 }
 
+#if HEARTBEAT_MS > 0
+unsigned long last_output_ms = 0;
+#endif
+
 void loop() {
   uint32_t data_local;  // Local copy of data to process
   bool sign; // Extracted from data, true: positive, false: negative
@@ -248,7 +255,18 @@ void loop() {
     data_local = data;
     interrupts();
     data_ready = false;
-    if (data_local != prev_data) {
+    // Only output data when it is different from the last reading
+    // OR passed HEARTBEAT if enabled.
+#if HEARTBEAT_MS > 0
+    bool do_output = (data_local != prev_data ||
+		      (millis() - last_output_ms) >= HEARTBEAT_MS);
+#else
+    bool do_output = data_local != prev_data;
+#endif
+    if (do_output) {
+#if HEARTBEAT_MS
+      last_output_ms = millis();
+#endif
       // Process the new data value
       sign = data_local & SIGN_MASK;
       inch_mm = data_local & INCH_MM_MASK;
@@ -309,7 +327,7 @@ void indicatorClockInterrupt() {
 ISR(TIMER2_OVF_vect) {
   // Set the output pin when data is ready, clear when not
   if (bits_read) {
-    if (bits_read == DATA_BIT_COUNT) {
+    if (bits_read == PACKET_BIT_COUNT) {
 #if DEBUG_OUTPUT_PIN
       bitSet(PORTB, PORTB4);
 #endif
